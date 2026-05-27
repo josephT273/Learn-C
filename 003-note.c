@@ -12,6 +12,8 @@
  * Load from file
  */
 
+#define FILE_NAME "notes.txt"
+
 typedef struct {
   int id;
   char note[1000];
@@ -35,17 +37,49 @@ void array_push(NoteArray *array, Note *note) {
   array->notes[array->count++] = *note;
 }
 
+void write_to_file(NoteArray *array) {
+  FILE *fileptr = fopen(FILE_NAME, "w");
+
+  if (fileptr == NULL) {
+    printf("Error opening file\n");
+    return;
+  }
+
+  for (int i = 0; i < array->count; i++) {
+    fprintf(fileptr, "%d, %s\n", array->notes[i].id, array->notes[i].note);
+  }
+  fclose(fileptr);
+}
+
+void read_note(NoteArray *array) {
+  FILE *fileptr = fopen(FILE_NAME, "r");
+  if (fileptr == NULL) {
+    printf("Error opening file\n");
+    return;
+  }
+  int tempID;
+  char note[1000];
+
+  while (fscanf(fileptr, "%d, %[^\n]", &tempID, note) == 2) {
+    Note temp_note;
+    temp_note.id = tempID;
+    strcpy(temp_note.note, note);
+    array_push(array, &temp_note);
+  }
+  fclose(fileptr);
+}
+
 void list_notes(NoteArray *array) {
   printf("List of notes\n");
-  for (int i = 0; i < array.count; i++) {
-    printf("%d. %s \n", i, (array.notes[i]).note);
+  for (int i = 0; i < array->count; i++) {
+    printf("%d. %s \n", i, (array->notes[i]).note);
   }
   printf("\n");
 }
 
 void delete_note(NoteArray *array) {
   int index = 0;
-  printf("Enter id to delete note: ");
+  printf("Enter index to delete note: ");
   scanf("%d", &index);
 
   if (array == NULL || index < 0 || index >= array->count) {
@@ -53,10 +87,12 @@ void delete_note(NoteArray *array) {
     return;
   }
 
-  for (int i = index; i < array->count; i++) {
+  for (int i = index; i < array->count - 1; i++) {
     array->notes[i] = array->notes[i + 1];
   }
   (array->count)--;
+  printf("Note deleted successfully\n");
+  write_to_file(array);
 }
 
 void edit_note(NoteArray *array) {
@@ -76,7 +112,8 @@ void edit_note(NoteArray *array) {
   fgets(note, sizeof(note), stdin);
 
   note[strcspn(note, "\n")] = '\0';
-  strcpy(array->notes[id].note, note);
+  strcpy(array->notes[index].note, note);
+  write_to_file(array);
 }
 
 void create_note(NoteArray *array) {
@@ -94,12 +131,14 @@ void create_note(NoteArray *array) {
   strcpy(temp_note.note, note);
   array_push(array, &temp_note);
   printf("\nNote added successfully\n\n");
+  write_to_file(array);
 }
 
 int main() {
   NoteArray array = {0};
-  int key = 0;
   int option = 0;
+
+  read_note(&array);
   do {
     printf("Select an option\n");
     printf("1. List notes\n");
@@ -124,9 +163,12 @@ int main() {
       delete_note(&array);
       break;
     case 0:
+      free(array.notes);
       return 0;
     default:
       printf("Please check your option selection\n");
     }
   } while (1);
+
+  free(array.notes);
 }
